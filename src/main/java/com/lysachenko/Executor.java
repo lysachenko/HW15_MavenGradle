@@ -1,94 +1,51 @@
 package com.lysachenko;
 
+import com.lysachenko.service.WordService;
+
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Scanner;
 
 public class Executor {
 
-    private final String SOURCE_FILE_NAME = "data.txt";
-    private final String BAD_WORD_FILE_NAME = "bad_words.txt";
+    private static final String SOURCE_FILE_NAME = "data.txt";
+    private static final String BAD_WORD_FILE_NAME = "bad_words.txt";
+    private static final int WORD_LENGTH = 3;
+    private static final int COUNT_OF_REPEATED_WORDS = 6;
 
     public void run() {
-        List<String> songText = removeUnnecessarySymbols(readFile(SOURCE_FILE_NAME));
-        List<String> badWordsList = removeUnnecessarySymbols(readFile(BAD_WORD_FILE_NAME));
+        WordService wordService = new WordService();
 
-        int totalWordCount = getWordsCount(songText);
-        List<String> textSongWithoutBadWords = removeBadWords(songText, badWordsList);
-        int totalWordCountWithoutBadWords = getWordsCount(removeBadWords(songText, badWordsList));
-        List<String> textSongWithoutBadWordsAndWordsLengthLessThree =
-                removeWordsLengthLessThan(removeBadWords(songText, badWordsList), 3);
+        List<String> songText = wordService.removeUnnecessarySymbols(readFileFromResources(SOURCE_FILE_NAME));
+        List<String> badWordsList = wordService.removeUnnecessarySymbols(readFileFromResources(BAD_WORD_FILE_NAME));
+
+        int totalWordCount = wordService.getWordsCount(songText);
+        List<String> textSongWithoutBadWords = wordService.removeBadWords(songText, badWordsList);
+        int totalWordCountWithoutBadWords = wordService.getWordsCount(wordService.removeBadWords(songText, badWordsList));
+        List<String> textSongWithoutBadWordsAndWordsLengthLessSpecified =
+                wordService.removeWordsLengthLessThan(wordService.removeBadWords(songText, badWordsList), WORD_LENGTH);
         int totalWordCountWithoutBadWordsAndWordsLengthLessThree =
-                getWordsCount(removeWordsLengthLessThan(removeBadWords(songText, badWordsList), 3));
+                wordService.getWordsCount(wordService.removeWordsLengthLessThan(wordService.removeBadWords(songText, badWordsList), 3));
 
         System.out.println("Total count of words = " + totalWordCount);
         System.out.println("Word list without bad words: " + textSongWithoutBadWords);
         System.out.println("Total count of words without bad words = " + totalWordCountWithoutBadWords);
-        System.out.println("Word list without bad words and word length less 3: "
-                + textSongWithoutBadWordsAndWordsLengthLessThree);
-        System.out.println("Total count of words without bad words and word length less 3 = "
+        System.out.println("Word list without bad words and word length less " + WORD_LENGTH + ": "
+                + textSongWithoutBadWordsAndWordsLengthLessSpecified);
+        System.out.println("Total count of words without bad words and word length less " + WORD_LENGTH + " = "
                 + totalWordCountWithoutBadWordsAndWordsLengthLessThree);
 
-        System.out.println("First 6 words that are most often repeated:");
-        getCountOfWords(songText, 6).forEach((word, count) -> System.out.println(word + " = " + count));
+        System.out.println("First " + COUNT_OF_REPEATED_WORDS + " words that are most often repeated:");
+        wordService.getCountOfWords(songText, COUNT_OF_REPEATED_WORDS).forEach((word, count) -> System.out.println(word + " = " + count));
     }
 
-    private Map<String, Integer> getCountOfWords(List<String> textSong, int limit) {
-        Map<String, Integer> wordCountMap = new TreeMap<>();
-        Integer count;
-        for (String word : textSong) {
-            count = wordCountMap.get(word);
-            if (count == null) {
-                wordCountMap.put(word, 1);
-            } else {
-                wordCountMap.put(word, count + 1);
-            }
-        }
-        wordCountMap = wordCountMap
-                .entrySet()
-                .stream()
-                .sorted((o1, o2) -> o2.getValue().compareTo(o1.getValue()))
-                .limit(limit)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> b, LinkedHashMap::new));
-        return wordCountMap;
-    }
-
-    private List<String> removeBadWords(List<String> songText, List<String> badWords) {
-        return songText.stream()
-                .filter(word -> !badWords.contains(word))
-                .collect(Collectors.toList());
-    }
-
-    private int getWordsCount(List<String> stringList) {
-        return stringList.size();
-    }
-
-    private List<String> toLowerCaseSymbols(List<String> stringList) {
-        return stringList.stream()
-                .map(String::toLowerCase)
-                .collect(Collectors.toList());
-    }
-
-    private List<String> removeWordsLengthLessThan(List<String> stringList, int length) {
-        return stringList.stream()
-                .filter(s -> s.length() > length)
-                .collect(Collectors.toList());
-    }
-
-    private List<String> removeUnnecessarySymbols(List<String> stringList) {
-        return stringList.stream()
-                .map(s -> s.replace(",", ""))
-                .map(s -> s.replace(" ", ""))
-                .map(s -> s.replace("(", ""))
-                .map(s -> s.replace(")", ""))
-                .map(s -> s.replace("!", ""))
-                .collect(Collectors.toList());
-    }
-
-    public List<String> readFile(String fileName) {
+    public List<String> readFileFromResources(String fileName) {
+        File file = new File(Objects.requireNonNull(getClass().getClassLoader().getResource(fileName)).getFile());
         List<String> strings = new ArrayList<>();
-        try (Scanner scanner = new Scanner(new File(fileName))) {
+        try (Scanner scanner = new Scanner(file)) {
             while (scanner.hasNextLine()) {
                 strings.add(scanner.next());
             }
